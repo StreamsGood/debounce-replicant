@@ -11,10 +11,12 @@
 				return {
 					source: {
 						type: Object,
-						observer: '_change'
+						observer: '_sourceChange',
+						notify: true
 					},
 					destination: {
 						type: Object,
+						observer: '_destinationChange',
 						notify: true
 					},
 					wait: {
@@ -24,21 +26,45 @@
 				}
 			}
 
-			_assignValue() {
-				this.destination = this.source;
+			_assignSource() {
+				// Avoid assigning the same value which would result in a replicant loop.
+				if (this.source !== this.destination) {
+					this.source = this.destination;
+				}
+				this._debounceAssignSource = undefined;
 			}
 
-			_change() {
+			_assignDestination() {
+				// Only assign the incoming value if there's not an active local set waiting.
+				if (this._debounceAssignSource == undefined) {
+					this.destination = this.source;
+				}
+				this._debounceAssignDestination = undefined;
+			}
+
+			_sourceChange() {
 				if (!this._settled) {
-					this._assignValue();
+					this._assignDestination();
 					this._settled = true;
 					return;
 				}
 
-				this._debouncer = Polymer.Debouncer.debounce(this._debouncer,
+				this._debounceAssignDestination = Polymer.Debouncer.debounce(this._debounceAssignDestination,
 					Polymer.Async.timeOut.after(this.wait),
 					() => {
-						this._assignValue()
+						this._assignDestination()
+					});
+			}
+
+			_destinationChange() {
+				if (!this._settled) {
+					return;
+				}
+
+				this._debounceAssignSource = Polymer.Debouncer.debounce(this._debounceAssignSource,
+					Polymer.Async.timeOut.after(this.wait),
+					() => {
+						this._assignSource();
 					});
 			}
 		}

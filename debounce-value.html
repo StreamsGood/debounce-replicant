@@ -2,6 +2,14 @@
 
 <script>
 	(function () {
+		const mutationHistory = [];
+
+		function generateMutationId() {
+			var array = new Uint32Array(1);
+			window.crypto.getRandomValues(array);
+			return array.toString();
+		}
+
 		class DebounceValue extends Polymer.Element {
 			static get is() {
 				return 'debounce-value';
@@ -27,17 +35,28 @@
 			}
 
 			_assignSource() {
-				// Avoid assigning the same value which would result in a replicant loop.
-				if (this.source !== this.destination) {
-					this.source = this.destination;
+        // Avoid assigning the same value which would result in a replicant loop.
+        // console.log(`assignSource`, this.source, this.destination, this.source.innerValue !== this.destination);
+				if (this.source.innerValue !== this.destination) {
+					const mutationId = generateMutationId();
+          mutationHistory.push(mutationId);
+          console.log(`assigningSource`, mutationId, this.destination);
+					this.source = {
+						mutationId: mutationId,
+						innerValue: this.destination
+					};
 				}
 				this._debounceAssignSource = undefined;
 			}
 
 			_assignDestination() {
-				// Only assign the incoming value if there's not an active local set waiting.
-				if (this._debounceAssignSource == undefined) {
-					this.destination = this.source;
+        // Only assign the incoming value if there's not an active local set waiting.
+        // console.log(`mutationHistory`, mutationHistory);
+        // console.log(`assignDestination`, this.source, this.source.mutationId, mutationHistory.includes(new String(this.source.mutationId).valueOf()));
+				if (this._debounceAssignSource == undefined && !mutationHistory.includes(new String(this.source.mutationId).valueOf())) {
+          console.log(`assigningDestination`, this.source.mutationId, this.source.innerValue);
+          mutationHistory.push(new String(this.source.mutationId).valueOf());
+          this.destination = this.source.innerValue;
 				}
 				this._debounceAssignDestination = undefined;
 			}

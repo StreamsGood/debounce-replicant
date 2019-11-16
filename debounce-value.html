@@ -35,29 +35,31 @@
 			}
 
 			_assignSource() {
-        // Avoid assigning the same value which would result in a replicant loop.
-        // console.log(`assignSource`, this.source, this.destination, this.source.innerValue !== this.destination);
-				if (this.source.innerValue !== this.destination) {
+				// Avoid assigning the same value which would result in a replicant loop.
+				// console.log(`assignSource`, this.source, this.destination, this.source.innerValue !== this.destination);
+				if (this.source.innerValue !== this.destination && this._dirty) {
 					const mutationId = generateMutationId();
-          mutationHistory.push(mutationId);
-          console.log(`assigningSource`, mutationId, this.destination);
+					mutationHistory.push(mutationId);
+					console.log(`assigningSource`, mutationId, this.destination);
 					this.source = {
 						mutationId: mutationId,
 						innerValue: this.destination
 					};
 				}
+				this._dirty = false;
 				this._debounceAssignSource = undefined;
 			}
 
 			_assignDestination() {
-        // Only assign the incoming value if there's not an active local set waiting.
-        // console.log(`mutationHistory`, mutationHistory);
-        // console.log(`assignDestination`, this.source, this.source.mutationId, mutationHistory.includes(new String(this.source.mutationId).valueOf()));
+				// Only assign the incoming value if there's not an active local set waiting.
+				// console.log(`mutationHistory`, mutationHistory);
+				// console.log(`assignDestination`, this.source, this.source.mutationId, mutationHistory.includes(new String(this.source.mutationId).valueOf()));
 				if (this._debounceAssignSource == undefined && !mutationHistory.includes(new String(this.source.mutationId).valueOf())) {
-          console.log(`assigningDestination`, this.source.mutationId, this.source.innerValue);
-          mutationHistory.push(new String(this.source.mutationId).valueOf());
-          this.destination = this.source.innerValue;
+					console.log(`assigningDestination`, this.source.mutationId, this.source.innerValue);
+					mutationHistory.push(new String(this.source.mutationId).valueOf());
+					this.destination = this.source.innerValue;
 				}
+				this._dirty = false;
 				this._debounceAssignDestination = undefined;
 			}
 
@@ -79,6 +81,8 @@
 				if (!this._settled) {
 					return;
 				}
+
+				this._dirty = true;
 
 				this._debounceAssignSource = Polymer.Debouncer.debounce(this._debounceAssignSource,
 					Polymer.Async.timeOut.after(this.wait),
